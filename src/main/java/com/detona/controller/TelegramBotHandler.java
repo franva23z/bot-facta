@@ -36,21 +36,26 @@ public class TelegramBotHandler extends TelegramLongPollingBot {
 
     @Override
     public void onUpdateReceived(Update update) {
-        // 1. TRATA MENSAGENS DE TEXTO (/proximo)
+        // 1. TRATA MENSAGENS DE TEXTO
         if (update.hasMessage() && update.getMessage().hasText()) {
             String msg = update.getMessage().getText();
             String chatId = update.getMessage().getChatId().toString();
 
             if (msg.equalsIgnoreCase("/proximo")) {
-                enviarProximoComBotoes(chatId);
-            } else {
-                enviarResposta(chatId, "Olá Tuanny! Digite */proximo* para buscar o próximo cliente da planilha.");
+                processarEnvioCliente(chatId, "proximo", null);
+            } 
+            else if (msg.toLowerCase().startsWith("/buscar ")) {
+                String termo = msg.substring(8).trim();
+                processarEnvioCliente(chatId, "buscar", termo);
+            } 
+            else {
+                enviarResposta(chatId, "Olá Tuanny! \nUse */proximo* para o próximo da fila ou \n*/buscar NomeOuCPF* para localizar um cliente específico.");
             }
         } 
         
         // 2. TRATA OS CLIQUES NOS BOTÕES DE STATUS
         else if (update.hasCallbackQuery()) {
-            String callData = update.getCallbackQuery().getData(); // Ex: "status:Agendado:5"
+            String callData = update.getCallbackQuery().getData();
             String chatId = update.getCallbackQuery().getMessage().getChatId().toString();
             
             try {
@@ -60,57 +65,68 @@ public class TelegramBotHandler extends TelegramLongPollingBot {
 
                 googleSheetsService.atualizarStatus(linha, statusTexto);
                 
-                enviarResposta(chatId, "✅ Status *'" + statusTexto + "'* gravado com sucesso na linha " + linha + "!\n\nDigite /proximo para o próximo.");
+                enviarResposta(chatId, "✅ Status *'" + statusTexto + "'* gravado na linha " + linha + "!\n\nDigite /proximo para continuar.");
             } catch (Exception e) {
                 enviarResposta(chatId, "❌ Erro ao gravar status: " + e.getMessage());
             }
         }
     }
 
-    private void enviarProximoComBotoes(String chatId) {
+    /**
+     * Método centralizado para buscar e enviar cliente com botões
+     */
+    private void processarEnvioCliente(String chatId, String acao, String termo) {
         try {
-            String info = googleSheetsService.getProximoCliente();
-            
-            // Verifica se o serviço retornou a linha para podermos criar os botões
+            String info;
+            if (acao.equals("buscar")) {
+                info = googleSheetsService.buscarClienteEspecifico(termo);
+            } else {
+                info = googleSheetsService.getProximoCliente();
+            }
+
+            // Se o retorno contém a indicação da linha, montamos o teclado
             if (info.contains("Linha:")) {
-                // Extrai o número da linha que o service enviou no final do texto
+                // Extrai o número da linha (espera-se que esteja no final após o ':')
                 int linha = Integer.parseInt(info.substring(info.lastIndexOf(":") + 1).trim());
                 
                 SendMessage message = new SendMessage();
                 message.setChatId(chatId);
                 message.setText(info);
-                message.setParseMode("Markdown");
+                message.setParseMode("HTML"); // Mudado para HTML para suportar os links <a href>
 
-                // CONFIGURAÇÃO DOS BOTÕES DE STATUS
-                InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
-                List<List<InlineKeyboardButton>> rows = new ArrayList<>();
-
-                // Linha 1 e 2
-                rows.add(List.of(botao("1 - Não atende", "status:Não atende:"+linha), 
-                                 botao("2 - Sem contato", "status:Sem contato:"+linha)));
-                
-                // Linha 3 e 4
-                rows.add(List.of(botao("3 - Sem Op Disp", "status:Sem Op Disp:"+linha), 
-                                 botao("4 - Sem interesse", "status:Sem interesse:"+linha)));
-                
-                // Linha 5 e 6
-                rows.add(List.of(botao("5 - Agendado", "status:Agendado:"+linha), 
-                                 botao("6 - Reagendado", "status:Reagendado:"+linha)));
-                
-                // Linha 7
-                rows.add(List.of(botao("7 - Retornar Contato", "status:Retornar:"+linha)));
-
-                markup.setKeyboard(rows);
+                InlineKeyboardMarkup markup = configurarBotoesStatus(linha);
                 message.setReplyMarkup(markup);
+                
                 execute(message);
             } else {
-                // Caso não tenha mais clientes ou erro, envia apenas o texto
                 enviarResposta(chatId, info);
             }
         } catch (Exception e) {
             e.printStackTrace();
-            enviarResposta(chatId, "❌ Erro ao processar comando: " + e.getMessage());
+            enviarResposta(chatId, "❌ Erro ao processar: " + e.getMessage());
         }
+    }
+
+    /**
+     * Cria o teclado de botões de status para uma linha específica
+     */
+    private InlineKeyboardMarkup configurarBotoesStatus(int linha) {
+        InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> rows = new ArrayList<>();
+
+        rows.add(List.of(botao("1 - Não atende", "status:Não atende:"+linha), 
+                         botao("2 - Sem contato", "status:Sem contato:"+linha)));
+        
+        rows.add(List.of(botao("3 - Sem Op Disp", "status:Sem Op Disp:"+linha), 
+                         botao("4 - Sem interesse", "status:Sem interesse:"+linha)));
+        
+        rows.add(List.of(botao("5 - Agendado", "status:Agendado:"+linha), 
+                         botao("6 - Reagendado", "status:Reagendado:"+linha)));
+        
+        rows.add(List.of(botao("7 - Retornar Contato", "status:Retornar:"+linha)));
+
+        markup.setKeyboard(rows);
+        return markup;
     }
 
     private InlineKeyboardButton botao(String texto, String callback) {
