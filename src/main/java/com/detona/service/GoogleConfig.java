@@ -19,21 +19,24 @@ public class GoogleConfig {
 
     @Bean
     public Sheets googleSheets() throws IOException, GeneralSecurityException {
-       
+        
+        // Certifique-se de que o arquivo credentials.json está em src/main/resources
         ClassPathResource resource = new ClassPathResource("credentials.json");
         
         if (!resource.exists()) {
-            throw new IOException(" ERRO: O arquivo credentials.json não está na pasta src/main/resources!");
+            throw new IOException("❌ ERRO: O arquivo credentials.json não foi encontrado em src/main/resources!");
         }
 
+        // Configura as credenciais com escopo de leitura e escrita em planilhas
         GoogleCredentials credentials = GoogleCredentials.fromStream(resource.getInputStream())
                 .createScoped(Collections.singleton(SheetsScopes.SPREADSHEETS));
 
+        // Constrói o serviço do Google Sheets
         return new Sheets.Builder(
                 GoogleNetHttpTransport.newTrustedTransport(),
                 GsonFactory.getDefaultInstance(),
                 new HttpCredentialsAdapter(credentials))
-                .setApplicationName("Logimetrics-Facta")
+                .setApplicationName("Bot-Facta-Automacao") // Nome atualizado do seu bot
                 .build();
     }
 }

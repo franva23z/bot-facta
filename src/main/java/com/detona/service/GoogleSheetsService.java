@@ -19,94 +19,82 @@ public class GoogleSheetsService {
         this.sheetsService = sheetsService;
     }
 
-    public String getProximoCliente() throws IOException {
-       
-        String range = "pagina1!A2:D2000"; 
-        
-        ValueRange response = sheetsService.spreadsheets().values()
-                .get(spreadsheetId, range)
-                .execute();
-
+    public String getProximoCliente(String aba) throws IOException {
+        String range = aba + "!A2:E2000";
+        ValueRange response = sheetsService.spreadsheets().values().get(spreadsheetId, range).execute();
         List<List<Object>> values = response.getValues();
 
-        if (values == null || values.isEmpty()) {
-            return "Não encontrei dados na aba <b>pagina1</b>.";
-        }
+        if (values == null || values.isEmpty()) return "❌ Aba " + aba + " vazia.";
 
         for (int i = 0; i < values.size(); i++) {
             List<Object> row = values.get(i);
-            
-            
             if (row.size() < 4 || row.get(3) == null || row.get(3).toString().trim().isEmpty()) {
-                
-                
-                String cpf = row.get(0).toString();
-                String nome = (row.size() > 1) ? row.get(1).toString() : "Sem Nome"; 
-                String telRaw = (row.size() > 2) ? row.get(2).toString() : "";     
-                
-               
-                String telLimpo = telRaw.replaceAll("\\D", "");
-                if (telLimpo.isEmpty()) continue;
-                if (!telLimpo.startsWith("55")) telLimpo = "55" + telLimpo;
-
-                int linhaPlanilha = i + 2;
-
-               
-                return "<b>📊 PRÓXIMO CLIENTE FACTA</b>\n\n" +
-                       "<b>🆔 CPF:</b> " + cpf + "\n" +
-                       "<b>👤 NOME:</b> " + nome + "\n" +
-                       "<b>📞 TEL:</b> " + telRaw + "\n\n" +
-                       "<a href=\"https://wa.me/" + telLimpo + "\"> CHAMAR</a>\n" +
-                       "--------------------------\n" +
-                       "Linha:" + linhaPlanilha;
+                return formatarSaida(row, i + 2, aba);
             }
         }
-        return "✅ Todos os clientes da <b>pagina1</b> já possuem status!";
-    }
-public String buscarClienteEspecifico(String termoBusca) throws IOException {
-    // Busca o mesmo intervalo que você já definiu
-    String range = "pagina1!A2:D2000"; 
-    ValueRange response = sheetsService.spreadsheets().values()
-            .get(spreadsheetId, range)
-            .execute();
-
-    List<List<Object>> values = response.getValues();
-
-    if (values == null || values.isEmpty()) {
-        return "Planilha vazia.";
+        return "✅ Todos os clientes de <b>" + aba + "</b> possuem status!";
     }
 
-    for (int i = 0; i < values.size(); i++) {
-        List<Object> row = values.get(i);
-        
-        // Verifica se a linha tem dados
-        if (row.size() < 2) continue;
+    public String buscarClienteEspecifico(String aba, String termo) throws IOException {
+        String range = aba + "!A2:E2000";
+        ValueRange response = sheetsService.spreadsheets().values().get(spreadsheetId, range).execute();
+        List<List<Object>> values = response.getValues();
 
-        String cpf = row.get(0).toString();
-        String nome = row.get(1).toString();
+        if (values == null) return "❌ Erro ao ler planilha.";
 
-        // Se o termo de busca bater com CPF ou parte do Nome
-        if (cpf.equals(termoBusca) || nome.toLowerCase().contains(termoBusca.toLowerCase())) {
-            
-            String telRaw = (row.size() > 2) ? row.get(2).toString() : "";
-            String telLimpo = telRaw.replaceAll("\\D", "");
-            if (!telLimpo.startsWith("55") && !telLimpo.isEmpty()) telLimpo = "55" + telLimpo;
-
-            int linhaPlanilha = i + 2;
-
-            return "<b>🔍 CLIENTE ENCONTRADO (Linha " + linhaPlanilha + ")</b>\n\n" +
-                   "<b>🆔 CPF:</b> " + cpf + "\n" +
-                   "<b>👤 NOME:</b> " + nome + "\n" +
-                   "<b>📞 TEL:</b> " + telRaw + "\n\n" +
-                   "<a href=\"https://wa.me/" + telLimpo + "\">📱 CHAMAR NO WHATSAPP</a>";
+        for (int i = 0; i < values.size(); i++) {
+            List<Object> row = values.get(i);
+            if (row.size() < 2) continue;
+            if (row.get(0).toString().contains(termo) || row.get(1).toString().toLowerCase().contains(termo.toLowerCase())) {
+                return formatarSaida(row, i + 2, aba);
+            }
         }
+        return "❌ Não encontrado na aba " + aba;
     }
-    return "❌ Cliente não encontrado com o termo: " + termoBusca;
-}
-    public void atualizarStatus(int linha, String status) throws IOException {
-        String range = "pagina1!D" + linha;
-        ValueRange body = new ValueRange().setValues(List.of(List.of(status)));
-        sheetsService.spreadsheets().values().update(spreadsheetId, range, body)
-                .setValueInputOption("RAW").execute();
+
+    private String formatarSaida(List<Object> row, int linha, String aba) {
+        String telRaw = (row.size() > 2) ? row.get(2).toString() : "";
+        String telLimpo = telRaw.replaceAll("\\D", "");
+        if (!telLimpo.isEmpty() && !telLimpo.startsWith("55")) telLimpo = "55" + telLimpo;
+
+        return "<b>📊 CLIENTE (" + aba + ")</b>\n\n" +
+               "<b>🆔 CPF:</b> " + row.get(0) + "\n" +
+               "<b>👤 NOME:</b> " + row.get(1) + "\n" +
+               "<b>📞 TEL:</b> " + telRaw + "\n\n" +
+               "<a href=\"https://wa.me/" + telLimpo + "\">📱 CHAMAR AGORA</a>\n" +
+               "--------------------------\n" +
+               "Linha:" + linha;
+    }
+
+    public void atualizarStatus(String aba, int linha, String status) throws IOException {
+        String range = aba + "!D" + linha;
+        sheetsService.spreadsheets().values().update(spreadsheetId, range, 
+            new ValueRange().setValues(List.of(List.of(status))))
+            .setValueInputOption("RAW").execute();
+    }
+
+    public void atualizarTroco(String aba, int linha, String valor) throws IOException {
+        String range = aba + "!E" + linha;
+        sheetsService.spreadsheets().values().update(spreadsheetId, range, 
+            new ValueRange().setValues(List.of(List.of(valor))))
+            .setValueInputOption("RAW").execute();
+    }
+
+    public String listarSemOpcao(String aba) throws IOException {
+        String range = aba + "!A2:D2000";
+        ValueRange response = sheetsService.spreadsheets().values().get(spreadsheetId, range).execute();
+        List<List<Object>> values = response.getValues();
+        StringBuilder sb = new StringBuilder("<b>📋 REPESCAGEM (" + aba + ")</b>\n\n");
+        int cont = 0;
+        if (values != null) {
+            for (int i = 0; i < values.size(); i++) {
+                List<Object> row = values.get(i);
+                if (row.size() >= 4 && row.get(3).toString().equalsIgnoreCase("Sem Op Disp")) {
+                    sb.append("📍 L").append(i + 2).append(": ").append(row.get(1)).append("\n");
+                    cont++; if (cont >= 15) break;
+                }
+            }
+        }
+        return cont == 0 ? "✅ Nada para repescagem em " + aba : sb.toString();
     }
 }
