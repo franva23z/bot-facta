@@ -20,23 +20,22 @@ public class GoogleConfig {
 
     @Bean
     public Sheets googleSheets() throws IOException, GeneralSecurityException {
-        // Pega o conteúdo que você colou lá no painel do Railway
+        // Tenta buscar na variável de ambiente (Padrão para o Railway)
         String jsonConfig = System.getenv("GOOGLE_CREDENTIALS");
         
         GoogleCredentials credentials;
 
         if (jsonConfig != null && !jsonConfig.isEmpty()) {
-            // Se estiver no Railway, ele usa a variável (Isso evita o erro de 'secret not found')
             credentials = GoogleCredentials.fromStream(new ByteArrayInputStream(jsonConfig.getBytes(StandardCharsets.UTF_8)))
                     .createScoped(Collections.singleton(SheetsScopes.SPREADSHEETS));
         } else {
-            // Se estiver no seu PC, ele tenta ler o arquivo localmente
+            // Caso rode local no VS Code
             try {
                 org.springframework.core.io.ClassPathResource resource = new org.springframework.core.io.ClassPathResource("credentials.json");
                 credentials = GoogleCredentials.fromStream(resource.getInputStream())
                         .createScoped(Collections.singleton(SheetsScopes.SPREADSHEETS));
             } catch (Exception e) {
-                throw new IOException("❌ ERRO: Defina GOOGLE_CREDENTIALS no Railway ou tenha o credentials.json local.");
+                throw new IOException("❌ ERRO: Faltam as credenciais do Google!");
             }
         }
 
@@ -44,7 +43,7 @@ public class GoogleConfig {
                 GoogleNetHttpTransport.newTrustedTransport(),
                 GsonFactory.getDefaultInstance(),
                 new HttpCredentialsAdapter(credentials))
-                .setApplicationName("Logimetrics-Facta")
+                .setApplicationName("FactaAutomacaoBot") // Nome alterado para evitar travas
                 .build();
     }
 }
