@@ -32,7 +32,7 @@ public class TelegramBotHandler extends TelegramLongPollingBot {
         return switch (user.toLowerCase()) {
             case "franvazxc" -> "pagina1";
             case "wendyfv" -> "Wendy";
-            case "Eli_torres16" -> "Eliziene";
+            case "Eli_torres16" -> "eliziene";
             case "MarlonsSilva" -> "Marlon";
             default -> "pagina1";
         };
