@@ -8,9 +8,10 @@ import com.google.auth.http.HttpCredentialsAdapter;
 import com.google.auth.oauth2.GoogleCredentials;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.io.ClassPathResource;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.util.Collections;
 
@@ -19,24 +20,31 @@ public class GoogleConfig {
 
     @Bean
     public Sheets googleSheets() throws IOException, GeneralSecurityException {
+        // Pega o conteúdo que você colou lá no painel do Railway
+        String jsonConfig = System.getenv("GOOGLE_CREDENTIALS");
         
-        // Certifique-se de que o arquivo credentials.json está em src/main/resources
-        ClassPathResource resource = new ClassPathResource("credentials.json");
-        
-        if (!resource.exists()) {
-            throw new IOException("❌ ERRO: O arquivo credentials.json não foi encontrado em src/main/resources!");
+        GoogleCredentials credentials;
+
+        if (jsonConfig != null && !jsonConfig.isEmpty()) {
+            // Se estiver no Railway, ele usa a variável (Isso evita o erro de 'secret not found')
+            credentials = GoogleCredentials.fromStream(new ByteArrayInputStream(jsonConfig.getBytes(StandardCharsets.UTF_8)))
+                    .createScoped(Collections.singleton(SheetsScopes.SPREADSHEETS));
+        } else {
+            // Se estiver no seu PC, ele tenta ler o arquivo localmente
+            try {
+                org.springframework.core.io.ClassPathResource resource = new org.springframework.core.io.ClassPathResource("credentials.json");
+                credentials = GoogleCredentials.fromStream(resource.getInputStream())
+                        .createScoped(Collections.singleton(SheetsScopes.SPREADSHEETS));
+            } catch (Exception e) {
+                throw new IOException("❌ ERRO: Defina GOOGLE_CREDENTIALS no Railway ou tenha o credentials.json local.");
+            }
         }
 
-        // Configura as credenciais com escopo de leitura e escrita em planilhas
-        GoogleCredentials credentials = GoogleCredentials.fromStream(resource.getInputStream())
-                .createScoped(Collections.singleton(SheetsScopes.SPREADSHEETS));
-
-        // Constrói o serviço do Google Sheets
         return new Sheets.Builder(
                 GoogleNetHttpTransport.newTrustedTransport(),
                 GsonFactory.getDefaultInstance(),
                 new HttpCredentialsAdapter(credentials))
-                .setApplicationName("Bot-Facta-Automacao") // Nome atualizado do seu bot
+                .setApplicationName("Logimetrics-Facta")
                 .build();
     }
 }
