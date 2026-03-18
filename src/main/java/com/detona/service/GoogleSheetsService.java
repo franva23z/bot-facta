@@ -8,8 +8,6 @@ import java.io.IOException;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Arrays;
-import com.detona.security.AcessoService;
-
 @Service
 public class GoogleSheetsService {
 
@@ -25,7 +23,7 @@ public class GoogleSheetsService {
     // --- MÉTODOS DE BUSCA E ENVIO ---
 
     public String getProximoCliente(String aba) throws IOException {
-        String range = aba + "!A2:E2000";
+        String range = "'" + aba + "'!A2:E2000";
         ValueRange response = sheetsService.spreadsheets().values().get(spreadsheetId, range).execute();
         List<List<Object>> values = response.getValues();
 
