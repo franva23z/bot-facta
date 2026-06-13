@@ -8,7 +8,7 @@ WORKDIR /app
 COPY . .
 
 
-RUN ./mvnw clean package -DskipTests
+RUN sh mvnw clean package -DskipTests
 
 
 RUN cp target/logica-0.0.1-SNAPSHOT.jar app.jar
