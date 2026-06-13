@@ -20,7 +20,7 @@ public class GoogleSheetsService {
         this.sheetsService = sheetsService;
     }
 
-    // --- MÉTODOS DE BUSCA E ENVIO ---
+   
 
     public String getProximoCliente(String aba) throws IOException {
         String range = "'" + aba + "'!A2:E2000";
@@ -33,7 +33,7 @@ public class GoogleSheetsService {
             List<Object> row = values.get(i);
             if (row == null || row.isEmpty()) continue;
             
-            // Verifica se a coluna de status (índice 3) está vazia
+            
             boolean statusVazio = row.size() < 4 || row.get(3) == null || row.get(3).toString().trim().isEmpty();
             
             if (statusVazio) {

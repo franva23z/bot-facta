@@ -20,7 +20,7 @@ public class GoogleConfig {
 
     @Bean
     public Sheets googleSheets() throws IOException, GeneralSecurityException {
-        // Tenta buscar na variável de ambiente (Padrão para o Railway)
+       
         String jsonConfig = System.getenv("GOOGLE_CREDENTIALS");
         
         GoogleCredentials credentials;
@@ -29,13 +29,13 @@ public class GoogleConfig {
             credentials = GoogleCredentials.fromStream(new ByteArrayInputStream(jsonConfig.getBytes(StandardCharsets.UTF_8)))
                     .createScoped(Collections.singleton(SheetsScopes.SPREADSHEETS));
         } else {
-            // Caso rode local no VS Code
+            
             try {
                 org.springframework.core.io.ClassPathResource resource = new org.springframework.core.io.ClassPathResource("credentials.json");
                 credentials = GoogleCredentials.fromStream(resource.getInputStream())
                         .createScoped(Collections.singleton(SheetsScopes.SPREADSHEETS));
             } catch (Exception e) {
-                throw new IOException("❌ ERRO: Faltam as credenciais do Google!");
+                throw new IOException(" ERRO: Faltam as credenciais do Google!");
             }
         }
 
