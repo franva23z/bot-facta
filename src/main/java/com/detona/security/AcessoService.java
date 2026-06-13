@@ -9,11 +9,9 @@ import java.util.Map;
 @ConfigurationProperties(prefix = "app")
 public class AcessoService {
 
-    // Inicializamos o mapa para evitar erros caso a variável não seja definida
     private Map<String, String> usuarios = new HashMap<>();
     private String adminUsername;
 
-    // Getters e Setters são obrigatórios para o @ConfigurationProperties
     public Map<String, String> getUsuarios() { return usuarios; }
     public void setUsuarios(Map<String, String> usuarios) { this.usuarios = usuarios; }
 
